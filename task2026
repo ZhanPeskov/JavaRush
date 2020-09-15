@@ -1,0 +1,76 @@
+package com.javarush.task.task20.task2026;
+
+/* 
+Алгоритмы-прямоугольники (Rectangles algorithm like checking ship placement in Sea Battle)
+*/
+
+public class Solution {
+    public static void main(String[] args) {
+        byte[][] a1 = new byte[][]{
+                {1, 1, 0, 0},
+                {1, 1, 0, 0},
+                {1, 1, 0, 0},
+                {1, 1, 0, 1}
+        };
+        byte[][] a2 = new byte[][]{
+                {1, 0, 0, 1},
+                {0, 0, 0, 0},
+                {0, 0, 0, 0},
+                {1, 0, 0, 1}
+        };
+
+        int count1 = getRectangleCount(a1);
+        System.out.println("count = " + count1 + ". Должно быть 2");
+        int count2 = getRectangleCount(a2);
+        System.out.println("count = " + count2 + ". Должно быть 4");
+    }
+
+    public static int getRectangleCount(byte[][] a) {
+        int width = 0, counter = 0;
+
+        for (int y = 0; y < a.length; ++y) {
+            for (int x = 0; x <= a[y].length; ++x) {
+                if (isPartOfRectangle(a, x, y)) {
+                    ++width;
+                } else if (width != 0) {
+                    if (isRectangle(a, x - width - 1, y - 1, x, width)) {
+                        ++counter;
+                    }
+
+                    width = 0;
+                }
+            }
+        }
+
+        return counter;
+    }
+
+    public static boolean isRectangle(byte[][] a, int cornerLeft, int cornerTop, int cornerRight, int width) {
+        int rowWidth;
+        boolean nonZeroValue, cornerTopOrLeft;
+
+        for (int y = cornerTop; y < a.length; ++y) {
+            rowWidth = 0;
+
+            for (int x = cornerLeft; x <= cornerRight; ++x) {
+                nonZeroValue = isPartOfRectangle(a, x, y);
+
+                if ((cornerTopOrLeft = (y == cornerTop || x == cornerLeft)) || x == cornerRight) {
+                    if (nonZeroValue) {
+                        return false;
+                    } else if (!cornerTopOrLeft && rowWidth < width) {
+                        return rowWidth == 0;
+                    }
+                } else if (nonZeroValue) {
+                    ++rowWidth;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean isPartOfRectangle(byte[][] a, int x, int y) {
+        return y >= 0 && y < a.length && x >= 0 && x < a[y].length && a[y][x] != 0;
+    }
+}
