@@ -1,0 +1,139 @@
+package com.javarush.task.task20.task2025;
+
+import java.util.Arrays;
+import java.util.TreeSet;
+
+/* 
+числа Армстронга
+Armstrong numbers (the most fastest way to calculate Armstrong numbers in a given range)
+*/
+
+public class Solution {
+    private static int depth;
+    private static int[] digits;
+    private static long maxValue;
+    private static long[][] pows;
+    private static TreeSet<Long> grandResult;
+
+    public static void main(String[] args) {
+        long a = System.currentTimeMillis();
+        System.out.println(Arrays.toString(getNumbers(1000)));
+        long b = System.currentTimeMillis();
+        System.out.println("memory " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (8 * 1024));
+//        System.out.println("time = " + (b - a) / 1000);
+        System.out.println("time = " + (b - a));
+
+        a = System.currentTimeMillis();
+        System.out.println(Arrays.toString(getNumbers(1000000)));
+        b = System.currentTimeMillis();
+        System.out.println("memory " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (8 * 1024));
+//        System.out.println("time = " + (b - a) / 1000);
+        System.out.println("time = " + (b - a));
+
+        a = System.currentTimeMillis();
+        System.out.println(Arrays.toString(getNumbers(Long.MAX_VALUE)));
+        b = System.currentTimeMillis();
+        System.out.println("memory " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (8 * 1024));
+//        System.out.println("time = " + (b - a) / 1000);
+        System.out.println("time = " + (b - a));
+    }
+
+    public static long[] getNumbers(long N) {
+        long[] result = null;
+        int maxDepth = (int) Math.ceil(Math.log10(N));       // maximum long depth = 19 on Long.MAX_VALUE
+
+        if (maxDepth > 0) {
+            maxValue = N;
+            digits = new int[maxDepth];
+            pows = new long[11][maxDepth];
+            grandResult = new TreeSet<>();
+
+            for (int i = 1; i < pows.length; i++) {
+                pows[i][0] = i;
+
+                for (int j = 1; j < pows[i].length; j++) {
+                    pows[i][j] = pows[i][j - 1] * i;
+                }
+            }
+
+            for (depth = 0; depth < maxDepth; ++depth) {
+                capacityIteration(0, depth);
+            }
+
+            int counter = 0;
+            result = new long[grandResult.size()];
+
+            for (long value : grandResult) {
+                result[counter++] = value;
+            }
+
+//            result = grandResult.toArray();
+        }
+
+        return result;
+    }
+
+    public static void capacityIteration(int start, int capacity) {
+        for (start = start == 0 && capacity == 0 ? 1 : start; start <= 9; ++start) {
+            digits[capacity] = start;
+
+            if (capacity > 0) {
+                capacityIteration(start, capacity - 1);
+            } else {
+                long sumPows = 0;
+
+                for (int i = 0; i <= depth; ++i) {
+                    sumPows += pows[digits[i]][depth];
+                }
+
+//                // 1. How many digits in positive long. (Fastest) 1x
+//                int sumDigitsCount = 0;
+//                while (sumPows >= pows[10][sumDigitsCount++] && sumDigitsCount < pows[10].length) {
+//                }
+//
+//                // 2. How many digits in positive long. 1.05x slower
+//                int sumDigitsCount;
+//                for (sumDigitsCount = 0; sumDigitsCount < pows[10].length; ++sumDigitsCount) if (sumPows < pows[10][sumDigitsCount]) break;
+//                ++sumDigitsCount;
+//
+//                // 3. How many digits in positive long. (Compact) 1.24x slower
+//                int sumDigitsCount = (int) Math.ceil(Math.log10(sumPows + 1));
+//
+//                // 4. How many digits in positive long. 1.55x slower
+//                long temp = sumPows;
+//                int sumDigitsCount = 1;
+//                while ((temp /= 10) != 0) ++sumDigitsCount;
+//
+//                // 5. How many digits in positive long. (Slowest) 2.4x slower
+//                // but we need String to calculate digits and split on chars
+//                int sumDigitsCount = String.valueOf(sumPows).length();
+
+                char[] chars = String.valueOf(sumPows).toCharArray();
+
+                if (chars.length - 1 == depth && sumPows < maxValue) {
+                    firstBlock:
+                    {
+                        for (int i = 0; i <= depth; ++i) {
+                            secondBlock:
+                            {
+                                for (int j = 0; j < chars.length; j++) {
+                                    if (digits[i] + 48 == chars[j]) {
+                                        chars[j] = 0;
+                                        break secondBlock;
+                                    }
+                                }
+
+                                break firstBlock;
+                            }
+                        }
+
+                        grandResult.add(sumPows);
+
+//                        for (int i = depth; i >= 0; --i) System.out.print(digits[i]);
+//                        System.out.println();
+                    }
+                }
+            }
+        }
+    }
+}
