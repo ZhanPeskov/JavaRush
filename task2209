@@ -1,0 +1,67 @@
+import java.io.*;
+
+/* 
+Составить цепочку слов (игра в Города)
+*/
+
+public class Solution {
+    public static void main(String[] args) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+             BufferedReader br = new BufferedReader(new FileReader(reader.readLine()/*, Charset.forName("windows-1251")*//*, StandardCharsets.UTF_8*/))) {
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                StringBuilder result = getLine(line.split("\\s+"));
+                System.out.println(result.toString());
+            }
+        }
+    }
+
+    public static StringBuilder getLine(String... words) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (words.length > 0) {
+            char[][] chars = new char[words.length][3];
+
+            for (int i = 0; i < words.length; ++i) {
+                String lowerWord = words[i].toLowerCase();
+                chars[i][1] = lowerWord.charAt(0);
+                chars[i][2] = lowerWord.charAt(lowerWord.length() - 1);
+            }
+
+            if (foundChain(chars, (char) 0, words.length - 1)) {
+                for (int i = words.length - 1; i >= 0; --i) {
+                    for (int j = 0; j < words.length; ++j) {
+                        if (chars[j][0] == i) {
+                            stringBuilder.append(words[j]);
+
+                            if (i > 0) {
+                                stringBuilder.append(" ");
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        return stringBuilder;
+    }
+
+    public static boolean foundChain(char[][] chars, char lastLetter, int depth) {
+        for (char[] info : chars) {
+            if (info[0] == 0 && (lastLetter == 0 || info[1] == lastLetter)) {
+                info[0] = (char) depth;
+
+                if (depth == 0 || foundChain(chars, info[2], depth - 1)) {
+                    return true;
+                } else {
+                    info[0] = 0;
+                }
+            }
+        }
+
+        return false;
+    }
+}
