@@ -64,10 +64,4 @@ private Action solutionAction = new Action() {
             ).someAction();
         }
     };
-
-
-
-НУ И В ДОГОНКУ ТРЕТИЙ ВАРИАНТ, ЕСЛИ КОНЕЧНО ЕСТЬ 100% УВЕРЕННОСТЬ ЧТО ВТОРОЙ КЛАСС ВЫЗЫВАЕТСЯ ПРИ ЛЮБОМ РАСКЛАДЕ
-    |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |
-    V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V
-
+	
