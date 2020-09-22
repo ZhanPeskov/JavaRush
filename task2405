@@ -64,4 +64,3 @@ private Action solutionAction = new Action() {
             ).someAction();
         }
     };
-	
