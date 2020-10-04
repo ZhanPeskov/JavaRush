@@ -1,0 +1,66 @@
+МОЖНО КОНЕЧНО РЕШИТЬ ТАК !!!
+    |     |     |     |
+    V     V     V     V
+
+private Action solutionAction = new Action() {
+        public void someAction() {
+            if (param > 0) {
+                while (param > 0) {
+                    System.out.println(param--);
+                }
+
+                new FirstClass() {
+                    @Override
+                    public Action getDependantAction() {
+                        return null;
+                    }
+                }.someAction();
+            }
+
+            new SecondClass() {
+                {
+                    sb.append(SPECIFIC_ACTION_FOR_ANONYMOUS_SECOND_CLASS_PARAM);
+                    sb.append(param);
+                }
+            }.someAction();
+        }
+    };
+
+
+
+НО ЕСЛИ СТРОГО СЛЕДОВАТЬ СПЕЦИАЛЬНО ЗАПУТАННОМУ ЗАДАНИЮ, ЧТОБЫ ВСЕ УСЛОВИЯ БЫЛИ СОБЛЮДЕНЫ, ТО ДОЛЖНО БЫТЬ ВИДИМО ТАК
+    |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |
+    V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V     V
+
+    private Action solutionAction = new Action() {
+        public void someAction() {
+            (param > 0 ?
+                    new FirstClass() {
+                        @Override
+                        public Action getDependantAction() {
+                            while (param > 0) {
+                                System.out.println(param--);
+                            }
+
+                            super.someAction();
+
+                            return new SecondClass() {
+                                {
+                                    sb.append(SPECIFIC_ACTION_FOR_ANONYMOUS_SECOND_CLASS_PARAM);
+                                    sb.append(param);
+                                }
+                            };
+                        }
+                    }.getDependantAction()
+
+                    :
+
+                    new SecondClass() {
+                        {
+                            sb.append(SPECIFIC_ACTION_FOR_ANONYMOUS_SECOND_CLASS_PARAM);
+                            sb.append(param);
+                        }
+                    }
+            ).someAction();
+        }
+    };
