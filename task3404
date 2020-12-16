@@ -1,0 +1,185 @@
+package com.javarush.task.task34.task3404;
+
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/* 
+Calculator (recursively replace text with result)
+*/
+
+public class Solution {
+    public static void main(String[] args) throws Exception {
+        Solution solution = new Solution();
+        solution.recurse("tan(45)", 0);  System.out.println("1 1 - expected output");
+        solution.recurse("tan(-45)", 0);  System.out.println("-1 2 - expected output");
+        solution.recurse("0.305", 0);  System.out.println("0.3 0 - expected output");
+        solution.recurse("0.3051", 0);  System.out.println("0.31 - expected output");
+        solution.recurse("(0.3051)", 0);  System.out.println("0.31 - expected output");
+        solution.recurse("1+(1+(1+1)*(1+1))*(1+1)+1", 0);  System.out.println("12 8 - expected output");
+        solution.recurse("tan(44+sin(89-cos(180)^2))", 0);  System.out.println("1 6 - expected output");
+        solution.recurse("-2+(-2+(-2)-2*(2+2))", 0);  System.out.println("-14 8 - expected output");
+        solution.recurse("sin(80+(2+(1+1))*(1+1)+2)", 0);  System.out.println("1 7 - expected output");
+        solution.recurse("1+4/2/2+2^2+2*2-2^(2-1+1)", 0);  System.out.println("6 11 - expected output");
+        solution.recurse("10-2^(2-1+1)", 0);  System.out.println("6 4 - expected output");
+        solution.recurse("2^10+2^(5+5)", 0);  System.out.println("2048 4 - expected output");
+        solution.recurse("1.01+(2.02-1+1/0.5*1.02)/0.1+0.25+41.1", 0);  System.out.println("72.96 8 - expected output");
+        solution.recurse("0.000025+0.000012", 0);  System.out.println("0 1 - expected output");
+        solution.recurse("-2-(-2-1-(-2)-(-2)-(-2-2-(-2)-2)-2-2)", 0);  System.out.println("-3 16 - expected output");
+        solution.recurse("cos(3 + 19*3)", 0);  System.out.println("0.5 3 - expected output");
+        solution.recurse("2*(589+((2454*0.1548/0.01*(-2+9^2))+((25*123.12+45877*25)+25))-547)", 0);  System.out.println("8302231.36 14 - expected output");
+        solution.recurse("(-1 + (-2))", 0);  System.out.println("-3 3 - expected output");
+        solution.recurse("-sin(2*(-5+1.5*4)+28)", 0);  System.out.println("-0.5 7 - expected output");
+        solution.recurse("sin(100)-sin(100)", 0);  System.out.println("0 3 - expected output");
+        solution.recurse("-(-22+22*2)", 0);  System.out.println("-22 4 - expected output");
+        solution.recurse("-2^(-2)", 0);  System.out.println("-0.25 3 - expected output");
+        solution.recurse("-(-2^(-2))+2+(-(-2^(-2)))", 0);  System.out.println("2.5 10 - expected output");
+        solution.recurse("(-2)*(-2)", 0);  System.out.println("4 3 - expected output");
+        solution.recurse("(-2)/(-2)", 0);  System.out.println("1 3 - expected output");
+        solution.recurse("sin(-30)", 0);  System.out.println("-0.5 2 - expected output");
+        solution.recurse("cos(-30)", 0);  System.out.println("0.87 2 - expected output");
+        solution.recurse("tan(-30)", 0);  System.out.println("-0.58 2 - expected output");
+        solution.recurse("2+8*(9/4-1.5)^(1+1)", 0);  System.out.println("6.5 6 - expected output");
+        solution.recurse("0.005", 0);  System.out.println("0.01 0 - expected output");
+        solution.recurse("0.0049", 0);  System.out.println("0 0 - expected output");
+        solution.recurse("0+0.304", 0);  System.out.println("0.3 1 - expected output");
+        solution.recurse("sin(45) - cos(45)", 0);  System.out.println("0 3 - expected output");
+        solution.recurse("0/(-3)", 0);  System.out.println("0 2 - expected output");
+    }
+
+    public double[] recurse(final String expression, int countOperation) throws Exception {
+        String modifiedExpression;
+        double[] result = new double[4];
+        int i, bracketPos = 0, closeBrackets = 0;
+        Pattern operation = Pattern.compile("(?:sin|cos|tan)$"/*, Pattern.CASE_INSENSITIVE*/);
+        Matcher operationExpression;
+
+        switch (countOperation) {
+            case 0:
+                modifiedExpression = expression.replaceAll("\\s", "");
+                result[3] = modifiedExpression.replaceAll("[^\\-]", "").length();
+                break;
+            default:
+                result[3] = countOperation;
+            case -1:
+                modifiedExpression = expression;
+        }
+
+        for (i = modifiedExpression.length() - 1; i >= 0; i--) {
+            switch (modifiedExpression.charAt(i)) {
+                case ')':
+                    if (++closeBrackets == 1) {
+                        bracketPos = i;
+                    }
+
+                    break;
+                case '(':
+                    switch (--closeBrackets) {
+                        case -1:
+                            throw new Exception("Illegal open bracket");
+                        case 0:
+                            result = recurse(modifiedExpression.substring(i + 1, bracketPos), result[3] == 0 ? -1 : (int) result[3]);
+
+                            if ((operationExpression = operation.matcher(modifiedExpression.substring(0, i).toLowerCase())).find()) {
+                                ++result[3];
+                                result[0] = Math.toRadians(result[2]);
+                                i -= operationExpression.group().length();
+
+                                switch (operationExpression.group()) {
+                                    case "sin":
+                                        result[2] = Math.sin(result[0]);
+                                        break;
+                                    case "cos":
+                                        result[2] = Math.cos(result[0]);
+                                        break;
+                                    case "tan":
+                                        result[2] = Math.tan(result[0]);
+                                        break;
+                                }
+                            }
+
+                            modifiedExpression = modifiedExpression.substring(0, i) +
+                                    result[2] + modifiedExpression.substring(bracketPos + 1);
+                    }
+            }
+        }
+
+        if (closeBrackets != 0) {
+            throw new Exception("Too many close brackets");
+        }
+
+        int operandsCount = 0;
+        String[] operands = new String[]{"\\^", "\\*\\/", "\\+\\-\\%"};
+
+        for (String operandsGroup : operands) {
+            operation = Pattern.compile("(?:(?:^|[" + operands[1] + operands[2] +
+                    "])(\\-))?(\\d+(?:\\.\\d+)?)([" + operandsGroup + "])(\\-)?(\\d+(?:\\.\\d+)?)", Pattern.CASE_INSENSITIVE);
+
+            while ((operationExpression = operation.matcher(modifiedExpression)).find()) {
+                bracketPos = operationExpression.start(2);
+
+                for (i = 0; i < 2; i++) {
+                    result[i] = Double.parseDouble(operationExpression.group(i * 3 + 2));
+
+                    if (operationExpression.group(i * 3 + 1) != null) {
+                        bracketPos -= 1 - i;
+                        result[i] = -result[i];
+                    }
+                }
+
+                switch (operationExpression.group(3).charAt(0)) {
+                    case '^':
+                        result[2] = Math.pow(result[0], result[1]);
+                        break;
+                    case '*':
+                        result[2] = result[0] * result[1];
+                        break;
+                    case '/':
+                        result[2] = result[0] / result[1];
+                        break;
+                    case '+':
+                        result[2] = result[0] + result[1];
+                        break;
+                    case '%':
+                        result[2] = result[0] % result[1];
+                        break;
+                    case '-':
+                        --result[3];
+                        result[2] = result[0] - result[1];
+                        break;
+                }
+
+                ++result[3];
+                ++operandsCount;
+
+                modifiedExpression = modifiedExpression.substring(0, bracketPos) +
+                        result[2] + modifiedExpression.substring(operationExpression.end());
+            }
+        }
+
+        if (operandsCount == 0) {
+            // Даже если выражение пришло рассчитанное после скобок или тоигонометрических функций
+            // то все равно рассчитываем его т.к. перед ним может содержаться минус
+            // пример, -sin(2*(-5+1.5*4)+28) должно отображаться -0.5 7
+            result[2] = Double.parseDouble(modifiedExpression);
+        }
+
+        if (countOperation == 0) {
+            NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+            numberFormat.setRoundingMode(RoundingMode.HALF_EVEN);
+            DecimalFormat df = (DecimalFormat) numberFormat;
+            df.applyPattern("#.##");
+            System.out.println(df.format(Math.round(result[2] * 100) / 100.0) + " " + (int) result[3]);
+//            System.out.printf(Locale.ENGLISH, "%.2f %.0f\n", Math.round(result[2] * 100) / 100.0, result[3]);
+        }
+
+        return result;
+    }
+
+    public Solution() {
+        //don't delete
+    }
+}
