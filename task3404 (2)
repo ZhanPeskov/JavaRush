@@ -1,0 +1,461 @@
+package com.javarush.task.task34.task3404;
+
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Locale;
+
+/* 
+Calculator (split on arrays)
+*/
+
+public class Solution {
+    private int splitOnList(ArrayList<Object> operands, final String expression, int pos, int firstOpenBracketPos, int openBrackets, int flags) {
+        final int CALC_DECIMAL = 0b0000_0000_0000_0001;      // СТРОГО такое значение для доступа к массиву parse
+        final int CALC_EXPONENT_SYMBOL = 0b0000_0000_0000_0010;      // СТРОГО такое значение для доступа к массиву parse
+        final int CALC_FUNCTION = 0b0000_0000_0000_0100;      // СТРОГО такое значение для доступа к массиву parse
+        final int CALC_EXPONENT_SIGN = 0b0000_0000_0001_0000;
+        final int CALC_EXPONENT_POW = 0b0000_0000_0010_0000;
+        final int CALC_LONG_NUMBER = 0b0000_0000_0100_0000;
+        final int CALC_DOUBLE_NUMBER = 0b0000_0000_1000_0000;
+        final int CALC_NEGATIVE = 0b0000_0001_0000_0000;
+        final int CALC_ANY_OPERAND = 0b0000_0010_0000_0000;
+        final int CALC_LEFT_BRACKET = 0b0000_0100_0000_0000;
+        final int CALC_RIGHT_BRACKET = 0b0000_1000_0000_0000;
+        final int CALC_EQUAL = 0b0001_0000_0000_0000;
+        final int lastCharPos = expression.length() - 1;
+        int flag, mask = 0;
+        int[] parse = new int[5];
+        char character;
+        String value;
+        ArrayList<Object> subOperands;
+
+        // получаем значение -1 чтобы например для выражения "%" писать Illegal use а не Illegal character
+        --parse[0];
+
+        for (; pos <= lastCharPos; pos++) {
+            checkBlock:
+            {
+                checkLastCharBlock:
+                {
+                    // иначе это надо будет присваивать у всех операндов и у плюса
+                    mask = CALC_LEFT_BRACKET | CALC_ANY_OPERAND;
+
+                    switch (character = expression.charAt(pos)) {
+                        case '-':
+                            mask = CALC_EQUAL;
+                        case '+':
+                            if ((flags & (CALC_EXPONENT_SYMBOL | CALC_EXPONENT_POW)) == CALC_EXPONENT_SYMBOL) {
+                                if ((flags & CALC_EXPONENT_SIGN) == 0) {
+                                    flags |= CALC_EXPONENT_SIGN;
+
+                                    break;
+                                } else {
+                                    break checkBlock;
+                                }
+                            }
+
+//                            break checkLastCharBlock;
+                        case '%', '/', '*', '√', '^', '=':
+                            break checkLastCharBlock;
+                        case '(':
+                            if ((flags & (CALC_RIGHT_BRACKET | CALC_EQUAL | CALC_LONG_NUMBER | CALC_DECIMAL)) != 0) {
+                                // то выдаем ошибку выделяя текущий символ с предыдущим
+                                break checkBlock;
+                            } else {
+                                if ((flags & CALC_FUNCTION) != 0) {
+                                    switch (value = expression.substring(parse[CALC_FUNCTION], pos)) {
+                                        default:
+                                            /* ну раз при закрытии скобки нам нужно доп проверки чтобы отделить имя функции, то и здесь этого делать не будем
+                                            --pos;*/
+
+                                            break checkBlock;
+                                        case "cos", "sin", "tan", "abs":
+                                            operands.add(value.charAt(1));
+                                    }
+                                }
+
+                                if (openBrackets == 0) {
+                                    firstOpenBracketPos = pos;
+                                }
+
+                                subOperands = new ArrayList<>();
+
+                                parse[0] = pos = splitOnList(subOperands, expression, pos + 1, firstOpenBracketPos, openBrackets + 1, CALC_LEFT_BRACKET);
+                                flags = CALC_RIGHT_BRACKET;
+
+                                operands.add(subOperands);
+
+                                continue;
+                            }
+                        case ')':
+                            if (openBrackets == 0) {
+                                throwRuntimeException(expression, "Closing bracket without open one (1st", pos, 0);
+                            } else {
+                                break checkLastCharBlock;
+                            }
+                        case '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+                            // если введена любая цифра (по нулю сюда тоже переходим) и при этом предыдущий символ
+                            // правая скобка, знак равно или идет описание функции (cos, sin, tan, abs)
+                            if ((flags & (CALC_RIGHT_BRACKET | CALC_EQUAL | CALC_FUNCTION)) != 0) {
+                                // то выдаем ошибку выделяя текущий символ с предыдущим
+                                break checkBlock;
+                            } else if ((flags & CALC_DECIMAL) == 0) {   // если десятичная точка еще не задана и проверяем именно в такой последовательности т.к. точка может быть задана и без лидирующей целой части числа как, например, ".23"
+                                if (character == '.') {
+                                    flag = CALC_DECIMAL;
+
+                                    parse[CALC_DECIMAL] = pos;
+                                } else {
+                                    flag = CALC_LONG_NUMBER;
+                                }
+
+                                // если мы еще не начинали ранее вводить целую часть числа
+                                if ((flags & CALC_LONG_NUMBER) == 0) {
+                                    // то указываем это строгим присвоением обнуляя все другие флаги
+                                    flags = flag;
+
+                                    // сохраняем позицию от которой начнем парсить число
+                                    parse[0] = pos;
+                                } else {
+                                    flags |= flag;
+                                }
+                            } else if (character == '.') {
+                                break checkBlock;
+                            } else {
+                                // если уже введен символ экспоненты то устанавливаем флаг что указана ее степень
+                                // в противном случае что указана дробная часть числа. Ни в коем случае не обнуляя при этом другие флаги !!!
+                                flags |= (flags & CALC_EXPONENT_SYMBOL) == 0 ? CALC_DOUBLE_NUMBER : CALC_EXPONENT_POW;
+                            }
+
+                            break;
+                        default:
+                            parse[flags = 0] = pos;
+
+//                            break checkBlock;     // ниже и так выполним этот переход
+                        case 'e':
+                            if ((flags & (CALC_DECIMAL | CALC_EXPONENT_SYMBOL)) == CALC_DECIMAL) {
+                                flags |= CALC_EXPONENT_SYMBOL;
+                                parse[CALC_DECIMAL | CALC_EXPONENT_SYMBOL] = pos;
+
+                                break;
+                            } else {
+                                break checkBlock;
+                            }
+                        case 'c', 'o', 's', 'i', 'n', 't', 'a', 'b':    // cos, sin, tan, abs
+                            if ((flags & (CALC_RIGHT_BRACKET | CALC_EQUAL | CALC_LONG_NUMBER | CALC_DECIMAL)) != 0) {
+                                // то выдаем ошибку выделяя текущий символ с предыдущим
+                                break checkBlock;
+                            } else if ((flags & CALC_FUNCTION) == 0) {
+                                // то указываем это строгим присвоением обнуляя все другие флаги
+                                flags = CALC_FUNCTION;
+
+                                // сохраняем позицию от которой начнем парсить наименование функции
+                                parse[CALC_FUNCTION] = pos;
+                            }
+
+//                            break;
+                    }
+
+                    // если обрабатываем не крайний символ в выражении
+                    if (pos < lastCharPos) {
+                        continue;
+                    }
+
+                    ++pos;
+                    character = '=';
+                }
+
+                if ((flags & (mask | CALC_FUNCTION)) == 0 &&
+                        (flags & (CALC_LONG_NUMBER | CALC_DECIMAL | CALC_DOUBLE_NUMBER | CALC_EXPONENT_SYMBOL)) != CALC_DECIMAL &&
+                        (flags & (CALC_EXPONENT_SYMBOL | CALC_EXPONENT_POW)) != CALC_EXPONENT_SYMBOL) {
+                    if ((flags & (CALC_LONG_NUMBER | CALC_DOUBLE_NUMBER | CALC_EXPONENT_POW)) != 0) {
+                        // здесь можем эксперементировать и парсить в каких то случаях в Long
+                        // а прибавление лидирующего нуля нужно для таких случаев как, например, ".e0". В остальных оно не будет иметь значения
+                        // Логика такая. Если допускается выражение ".23", то почему не допускается ".e0"
+                        operands.add(Double.parseDouble("0" + expression.substring(parse[0], pos)));
+                    }
+
+                    // сбрасываем начальную позицию парсинга для того чтобы большинство последующих сообщений
+                    // об ошибке были начиная с данного символа (чаще длиной 2 символа), например "2+3=5"
+                    parse[0] = pos;
+
+                    flag = flags;
+                    flags = CALC_ANY_OPERAND;
+
+                    switch (character) {
+                        case '=':
+                            flags |= CALC_EQUAL;
+
+                            continue;
+                        case ')':
+                            return pos;
+                        case '-':
+                            if ((flag & (CALC_LEFT_BRACKET | CALC_ANY_OPERAND)) != 0) {
+                                if ((flag & CALC_NEGATIVE) == 0) {
+                                    character = '±';
+                                    flags |= CALC_NEGATIVE;
+                                } else {
+                                    parse[0] -= 2;
+
+                                    break checkBlock;
+                                }
+                            }
+                        default:
+                            operands.add(character);
+                    }
+
+                    continue;
+                }/* else if (character == ')') {
+                    Не совсем тут все просто. Если, например, "(2+cos)", то отобразить что Illegal function cos не совсем верно, тут скорее Illegal use, ну или cos)
+                    --pos;
+                }*/
+            }
+
+            int offset = pos - parse[flags & (CALC_DECIMAL | CALC_EXPONENT_SYMBOL | CALC_FUNCTION)];
+
+            throwRuntimeException(expression, "Illegal " + ((flags & (CALC_LONG_NUMBER | CALC_DECIMAL)) != 0 ? ((flags & CALC_DECIMAL) != 0 ? "double" : "long") +
+                    " number" + ((flags & CALC_EXPONENT_SYMBOL) != 0 ? " exponent" : "") : (flags & CALC_FUNCTION) != 0 ? "function" : offset == 0 ? "character" : "use") +
+                    " (start", pos, offset);
+        }
+
+        if (openBrackets != 0) {
+            throwRuntimeException(expression, "Too many open brackets (1st of " + openBrackets, firstOpenBracketPos, 0);
+        }
+
+        return 0;
+    }
+
+    private void throwRuntimeException(final String expression, String message, int pos, int startOffset) {
+        if (startOffset > pos) {
+            startOffset = pos;
+        }
+
+        message += " at position " + (pos -= startOffset) + "): " + expression.substring(0, pos) + "►";
+
+        if ((startOffset += pos + 1) > expression.length()) {
+            startOffset = expression.length();
+        }
+
+        throw new RuntimeException(message + expression.substring(pos, startOffset) + "◄" + expression.substring(startOffset));
+    }
+
+    private Double nextValue(ArrayList<Object> operands, int removeIndex) {
+        Object operand = operands.remove(removeIndex);
+
+        if (operand instanceof Character && (Character) operand == '±') {
+            operand = -(Double) operands.remove(removeIndex);
+        }
+
+        return (Double) operand;
+    }
+
+    private Double calculate(ArrayList<Object> operands) {
+        final int PRIORITIES_COUNT = 6;
+        Double value = null, nextValue;
+        int setIndex, operandIndex;
+        Object operand;
+
+        for (int priority = 0; priority < PRIORITIES_COUNT; priority++) {
+            for (operandIndex = 0; operandIndex < operands.size(); operandIndex++) {
+                operand = operands.get(operandIndex);
+
+                if (priority == 0) {
+                    if (operand instanceof ArrayList) {
+                        value = calculate((ArrayList) operand);
+                    } else {
+                        continue;
+                    }
+                } else if (operand instanceof Character) {
+                    if ((priority == 1 && (Character) operand <= 'z' && (Character) operand >= 'a') ||
+                            (priority == 2 && ((Character) operand == '^' || (Character) operand == '√')) ||
+                            (priority == 3 && ((Character) operand == '*' || (Character) operand == '/' || (Character) operand == '%')) ||
+                            (priority == 4 && (Character) operand == '±') ||
+                            (priority == 5 && ((Character) operand == '+' || (Character) operand == '-'))) {
+                        nextValue = nextValue(operands, operandIndex + 1);
+
+                        switch ((Character) operand) {
+                            case '^':
+                                value = Math.pow(value, nextValue);
+
+                                break;
+                            case '√':
+                                value = Math.pow(nextValue, 1 / value);
+
+                                break;
+                            case '*':
+                                value *= nextValue;
+
+                                break;
+                            case '/':
+                                value /= nextValue;
+
+                                break;
+                            case '%':
+                                value %= nextValue;
+
+                                break;
+                            case '±':
+                                value = -nextValue;
+
+                                break;
+                            case '+':
+                                value += nextValue;
+
+                                break;
+                            case '-':
+                                value -= nextValue;
+
+                                break;
+                            case 'b':           // abs()
+                                value = Math.abs(nextValue);
+
+                                break;
+                            default:
+                                value = Math.toRadians(nextValue);
+
+                                switch ((Character) operand) {
+                                    case 'o':   // cos()
+                                        value = Math.cos(value);
+
+                                        break;
+                                    case 'i':   // sin()
+                                        value = Math.sin(value);
+
+                                        break;
+                                    case 'a':   // tan()
+                                        value = Math.tan(value);
+
+//                                        break;
+                                }
+
+//                                break;
+                        }
+                    } else {
+                        continue;
+                    }
+                } else {
+                    // тут проверяем именно на Number а не Double, потому что вдруг модифицируем и будем использовать и другие типы
+                    if (priority > 1 && operand instanceof Number) {
+                        value = (Double) operand;
+                    }
+
+                    continue;
+                }
+
+                if (priority < 2 || priority == 4) {
+                    // operandIndex++ для того чтобы обрабатывать быстрее и пропустить следующий элемент
+                    // т.к. такие операнды как сгруппированные выражения и функции не могут идти подряд
+                    setIndex = operandIndex++;
+                } else {
+                    operands.remove(operandIndex);
+                    setIndex = --operandIndex;
+                }
+
+                operands.set(setIndex, value);
+            }
+        }
+
+        return value;
+    }
+
+    public void recurse(final String expression, int countOperation) {
+        final int CALC_LEFT_BRACKET = 0b0000_0100_0000_0000;
+        ArrayList<Object> operands = new ArrayList<>();
+
+        // удаляем все пробелы и опострофы которыми также можем разделять разряды цифр
+        splitOnList(operands, expression.replaceAll("[\\s']", "").replaceAll(",", ".").toLowerCase(Locale.ROOT),
+                0, 0, 0, CALC_LEFT_BRACKET);
+
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+        numberFormat.setRoundingMode(RoundingMode.HALF_EVEN);
+        DecimalFormat df = (DecimalFormat) numberFormat;
+        df.applyPattern("#.##");
+        System.out.println(df.format(Math.round(calculate(operands) * 100) / 100.0));
+//            System.out.printf(Locale.ENGLISH, "%.2f %.0f\n", Math.round(result[2] * 100) / 100.0, result[3]);
+
+        return;
+    }
+
+    public Solution() {
+        //don't delete
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        /*System.out.println(Long.parseLong("9223372036854775807"));
+        System.out.println(Double.parseDouble("9223372036854775808"));
+        System.out.println((long) (Double.parseDouble("9223372036854775808") - 1));
+
+        System.out.println("000 = " + Double.parseDouble("000"));
+        System.out.println("001 = " + Double.parseDouble("001"));
+        System.out.println("0. = " + Double.parseDouble("0."));
+//        System.out.println(". = " + Double.parseDouble("."));         // failed
+        System.out.println(".0 = " + Double.parseDouble(".0"));
+        System.out.println(".23 = " + Double.parseDouble(".23"));
+        System.out.println("00.23 = " + Double.parseDouble("00.23"));
+        System.out.println("001.23 = " + Double.parseDouble("001.23"));
+//        System.out.println(".e0 = " + Double.parseDouble(".e0"));       // success, т.к. будем добавлять вначале символ "0"
+//        System.out.println(".e1 = " + Double.parseDouble(".e1"));       // success, т.к. будем добавлять вначале символ "0"
+        System.out.println(".0e0 = " + Double.parseDouble(".0e0"));
+        System.out.println("0.e0 = " + Double.parseDouble("0.e0"));
+        System.out.println("001.e01 = " + Double.parseDouble("001.e01"));
+        System.out.println("001.e-01 = " + Double.parseDouble("001.e-01"));
+        System.out.println("001.e+01 = " + Double.parseDouble("001.e+01"));
+        System.out.println("0.e0001 = " + Double.parseDouble("0.e0001"));
+        System.out.println("1.23e001 = " + Double.parseDouble("1.23e001"));
+        System.out.println("0.e-0 = " + Double.parseDouble("0.e-0"));
+        System.out.println("0.e+0 = " + Double.parseDouble("0.e+0"));
+        System.out.println("001.e0 = " + Double.parseDouble("001.e0"));
+        System.out.println("001.e-0 = " + Double.parseDouble("001.e-0"));
+        System.out.println("001.e+0 = " + Double.parseDouble("001.e+0"));
+        System.out.println("001.e-4 = " + Double.parseDouble("001.e-4"));
+        System.out.println("001.e+6 = " + Double.parseDouble("001.e+6"));
+        System.out.println("001.e2 = " + Double.parseDouble("001.e2"));
+        System.out.println("001.0e2 = " + Double.parseDouble("001.0e2"));
+        System.out.println("001.23e2 = " + Double.parseDouble("001.23e2"));
+        System.out.println("001.234e3 = " + Double.parseDouble("001.234e3"));
+        System.out.println("001.2345e-4 = " + Double.parseDouble("001.2345e-4"));
+        System.out.println("001.00000e-4 = " + Double.parseDouble("001.00000e-4"));
+//        System.out.println("001.e = " + Double.parseDouble("001.e"));     // failed
+//        System.out.println("001.0e- = " + Double.parseDouble("001.0e-"));   // failed
+//        System.out.println("001.23e+ = " + Double.parseDouble("001.23e+"));  // failed*/
+
+        Solution solution = new Solution();
+
+        solution.recurse("tan(45)", 0);  System.out.println("1 1 - expected output");
+        solution.recurse("tan(-45)", 0);  System.out.println("-1 2 - expected output");
+        solution.recurse("0.305", 0);  System.out.println("0.3 0 - expected output");
+        solution.recurse("0.3051", 0);  System.out.println("0.31 - expected output");
+        solution.recurse("(0.3051)", 0);  System.out.println("0.31 - expected output");
+        solution.recurse("1+(1+(1+1)*(1+1))*(1+1)+1", 0);  System.out.println("12 8 - expected output");
+        solution.recurse("tan(44+sin(89-cos(180)^2))", 0);  System.out.println("1 6 - expected output");
+        solution.recurse("-2+(-2+(-2)-2*(2+2))", 0);  System.out.println("-14 8 - expected output");
+        solution.recurse("sin(80+(2+(1+1))*(1+1)+2)", 0);  System.out.println("1 7 - expected output");
+        solution.recurse("1+4/2/2+2^2+2*2-2^(2-1+1)", 0);  System.out.println("6 11 - expected output");
+        solution.recurse("10-2^(2-1+1)", 0);  System.out.println("6 4 - expected output");
+        solution.recurse("2^10+2^(5+5)", 0);  System.out.println("2048 4 - expected output");
+        solution.recurse("1.01+(2.02-1+1/0.5*1.02)/0.1+0.25+41.1", 0);  System.out.println("72.96 8 - expected output");
+        solution.recurse("0.000025+0.000012", 0);  System.out.println("0 1 - expected output");
+        solution.recurse("-2-(-2-1-(-2)-(-2)-(-2-2-(-2)-2)-2-2)", 0);  System.out.println("-3 16 - expected output");
+        solution.recurse("cos(3 + 19*3)", 0);  System.out.println("0.5 3 - expected output");
+        solution.recurse("2*(589+((2454*0.1548/0.01*(-2+9^2))+((25*123.12+45877*25)+25))-547)", 0);  System.out.println("8302231.36 14 - expected output");
+        solution.recurse("(-1 + (-2))", 0);  System.out.println("-3 3 - expected output");
+        solution.recurse("-sin(2*(-5+1.5*4)+28)", 0);  System.out.println("-0.5 7 - expected output");
+        solution.recurse("sin(100)-sin(100)", 0);  System.out.println("0 3 - expected output");
+        solution.recurse("-(-22+22*2)", 0);  System.out.println("-22 4 - expected output");
+        solution.recurse("-2^(-2)", 0);  System.out.println("-0.25 3 - expected output");
+        solution.recurse("-(-2^(-2))+2+(-(-2^(-2)))", 0);  System.out.println("2.5 10 - expected output");
+        solution.recurse("(-2)*(-2)", 0);  System.out.println("4 3 - expected output");
+        solution.recurse("(-2)/(-2)", 0);  System.out.println("1 3 - expected output");
+        solution.recurse("sin(-30)", 0);  System.out.println("-0.5 2 - expected output");
+        solution.recurse("cos(-30)", 0);  System.out.println("0.87 2 - expected output");
+        solution.recurse("tan(-30)", 0);  System.out.println("-0.58 2 - expected output");
+        solution.recurse("2+8*(9/4-1.5)^(1+1)", 0);  System.out.println("6.5 6 - expected output");
+        solution.recurse("0.005", 0);  System.out.println("0.01 0 - expected output");
+        solution.recurse("0.0049", 0);  System.out.println("0 0 - expected output");
+        solution.recurse("0+0.304", 0);  System.out.println("0.3 1 - expected output");
+        solution.recurse("sin(45) - cos(45)", 0);  System.out.println("0 3 - expected output");
+        solution.recurse("0/(-3)", 0);  System.out.println("0 2 - expected output");
+    }
+}
