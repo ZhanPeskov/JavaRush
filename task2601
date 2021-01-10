@@ -1,0 +1,43 @@
+package com.javarush.task.task26.task2601;
+
+import java.util.Arrays;
+import java.util.Comparator;
+
+/* 
+Почитать в инете про медиану выборки
+*/
+
+public class Solution {
+
+    public static void main(String[] args) {
+//        Integer[] array = new Integer[]{1, 2, 3, 4, 5};
+//        Integer[] array = new Integer[]{1, 2, 3, 4, 5, 6};
+//        Integer[] array = new Integer[]{13, 8, 15, 5, 17};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE, Integer.MIN_VALUE + 2};
+//        Integer[] array = new Integer[]{0, 2000000000, Integer.MIN_VALUE, -2000000000, Integer.MAX_VALUE};
+        /*sort(array);
+        for (int value : array) {
+            System.out.println(value);
+        }*/
+    }
+
+    public static Integer[] sort(Integer[] array) {
+        if (array.length > 1) {
+            Arrays.sort(array);
+            int medianIndex = array.length / 2;
+            final long median = array.length % 2 == 0 ? ((long) array[medianIndex] + array[medianIndex - 1]) * 5L : array[medianIndex] * 10L;
+
+            Arrays.sort(array, new Comparator<Integer>() {
+                @Override
+                public int compare(Integer o1, Integer o2) {
+                    Long number1 = Math.abs(o1 * 10L - median);
+                    Long number2 = Math.abs(o2 * 10L - median);
+
+                    return number1 == number2 ? o1 - o2 : number1.compareTo(number2);
+                }
+            });
+        }
+
+        return array;
+    }
+}
