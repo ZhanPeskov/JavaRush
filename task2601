@@ -1,0 +1,114 @@
+package com.javarush.task.task26.task2601;
+
+import java.util.Arrays;
+import java.util.Comparator;
+
+/* 
+Почитать в инете про медиану выборки
+*/
+
+public class Solution {
+
+    public static void main(String[] args) {
+//        Integer[] array = new Integer[]{1, 2, 3, 4, 5};
+//        Integer[] array = new Integer[]{1, 2, 3, 4, 5, 6};
+//        Integer[] array = new Integer[]{13, 8, 15, 5, 17};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE + 1, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE + 2, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE - 2, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE + 2, Integer.MIN_VALUE, 10, 100, Integer.MAX_VALUE - 2, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{-40, -30, -20, -10, Integer.MAX_VALUE - 1, Integer.MAX_VALUE - 2, 600};
+//        Integer[] array = new Integer[]{40, 30, 20, 10, Integer.MIN_VALUE + 42, Integer.MAX_VALUE - 2, -600};
+//        Integer[] array = new Integer[]{40, 30, 20, 10, Integer.MIN_VALUE + 43, Integer.MAX_VALUE - 2, -600};
+//        Integer[] array = new Integer[]{40, 30, 20, 10, Integer.MIN_VALUE + 1, Integer.MIN_VALUE + 2, -600};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE + 200, Integer.MIN_VALUE, -10, -100, Integer.MAX_VALUE - 2, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{6, 3};
+//        Integer[] array = new Integer[]{7, 3};
+//        Integer[] array = new Integer[]{7, 4};
+//        Integer[] array = new Integer[]{6, 4};
+//        Integer[] array = new Integer[]{8, 4};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE, -1, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE, 0, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MAX_VALUE, 1, Integer.MIN_VALUE};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE, -10, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{Integer.MIN_VALUE, 10, Integer.MAX_VALUE};
+//        Integer[] array = new Integer[]{2000000001, 0, -2000000000, -2000000001, 2000000000};
+//        Integer[] array = new Integer[]{0, 2000000000, Integer.MIN_VALUE, -2000000000, Integer.MAX_VALUE};
+        /*sort(array);
+        for (Integer value : array) {
+            System.out.println(value);
+        }*/
+    }
+
+    public static Integer[] sort(Integer[] array) {
+        if (array.length > 1) {
+            Arrays.sort(array);
+
+            // все равно что делим на 2, но если компилятор сам не подставляет побитовое смещение при делении на 2 то убежден что такая конструкция быстрее
+            final int medianIndex = array.length >> 1;
+
+            int differenceToMedianHi = 0, tempMedianLo = array[medianIndex];
+
+            if (array.length % 2 == 0) {
+                // раз мы хотим отказаться от использования переменных double
+                // то здесь вычисляем среднее арифметическое значение двух не классическим способом получением разницы между ними деленное пополам
+                // а именно вот так хитро т.к., например, массив может состоять всего из двух значений Integer.MIN_VALUE и Integer.MIN_VALUE
+                if ((tempMedianLo & 1) != 0) {
+                    ++differenceToMedianHi;
+                }
+
+                tempMedianLo >>= 1;
+
+                if ((array[medianIndex - 1] & 1) != 0 && (differenceToMedianHi ^= 1) == 0) {
+                    ++tempMedianLo;
+                }
+
+                tempMedianLo += array[medianIndex - 1] >> 1;
+            }
+
+            final int medianLo = tempMedianLo;
+            final int medianHi = tempMedianLo + differenceToMedianHi;
+
+            /*System.out.println("mediahLo: " + medianLo);
+            System.out.println("mediahHi: " + medianHi);
+            Collections.shuffle(Arrays.asList(array));*/
+
+            Arrays.sort(array, new Comparator<Integer>() {
+                @Override
+                public int compare(Integer o1, Integer o2) {
+                    int tooSmallValuesCount = 0, retValue = 0;
+
+                    if (o1 > 0 && medianHi < 0 && o1 - Integer.MAX_VALUE > medianHi ||
+                            o1 < 0 && medianLo > 0 && o1 - Integer.MIN_VALUE < medianLo && ++tooSmallValuesCount > 0) {
+                        ++retValue;
+                    }
+
+                    if (o2 > 0 && medianHi < 0 && o2 - Integer.MAX_VALUE > medianHi ||
+                            o2 < 0 && medianLo > 0 && o2 - Integer.MIN_VALUE < medianLo && ++tooSmallValuesCount > 0) {
+                        retValue -= 3;
+                    }
+
+                    if ((retValue & 1) != 0) {
+                        return retValue;
+                    } else if (retValue == 0) {
+                        int number1 = o1 >= medianHi ? o1 - medianHi : medianLo - o1;
+                        int number2 = o2 >= medianHi ? o2 - medianHi : medianLo - o2;
+
+                        if (number1 != number2) {
+                            return number1 - number2;
+                        }
+                    } else if (tooSmallValuesCount == 2) {
+                        return o2.compareTo(o1);
+                    }
+
+                    return o1.compareTo(o2);
+                }
+            });
+        }
+
+        return array;
+    }
+}
